@@ -1,0 +1,3 @@
+option('gui',     type: 'feature', value: 'auto', description: 'Build the GTK4/libadwaita front-end')
+option('hotplug', type: 'feature', value: 'auto', description: 'Use GUdev for hotplug device notifications')
+option('udisks',  type: 'feature', value: 'auto', description: 'Use the UDisks2 D-Bus API for privileged operations')

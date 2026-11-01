@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist gettext-domain="rufox">
+  <schema id="io.github.rufox" path="/io/github/rufox/">
+    <key name="last-device" type="s">
+      <default>''</default>
+      <summary>Last selected device</summary>
+    </key>
+    <key name="partition-scheme" type="s">
+      <default>'GPT'</default>
+      <summary>Preferred partition scheme (MBR, GPT or SFD)</summary>
+    </key>
+    <key name="target-system" type="s">
+      <default>'UEFI'</default>
+      <summary>Preferred target system (BIOS or UEFI)</summary>
+    </key>
+    <key name="quick-format" type="b">
+      <default>true</default>
+      <summary>Quick format</summary>
+    </key>
+    <key name="show-advanced" type="b">
+      <default>false</default>
+      <summary>Whether the advanced sections start expanded</summary>
+    </key>
+  </schema>
+</schemalist>
