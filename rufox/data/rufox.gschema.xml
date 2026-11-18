@@ -1,6 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <schemalist gettext-domain="rufox">
   <schema id="io.github.rufox" path="/io/github/rufox/">
+    <key name="language" type="s">
+      <default>'system'</default>
+      <summary>Interface language (system, en or ru)</summary>
+    </key>
     <key name="last-device" type="s">
       <default>''</default>
       <summary>Last selected device</summary>

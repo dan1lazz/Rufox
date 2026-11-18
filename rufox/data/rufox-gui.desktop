@@ -2,7 +2,9 @@
 Type=Application
 Name=Rufox
 GenericName=USB Formatting Utility
+GenericName[ru]=Утилита форматирования USB
 Comment=Create bootable USB drives from ISO and disk images
+Comment[ru]=Создание загрузочных USB-накопителей из ISO и образов дисков
 Exec=rufox-gui
 Icon=io.github.rufox
 Terminal=false

@@ -9,6 +9,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 #include "ui/rufox-gui.h"
+#include "rufox-config.h"
 
 #include <stdio.h>
 #include <locale.h>
@@ -21,33 +22,58 @@ static gboolean opt_dry_run = FALSE;
 
 static const GOptionEntry options[] = {
 	{ "iso",     'i', 0, G_OPTION_ARG_FILENAME, &opt_iso,
-	  "Preselect the ISO image pointed by PATH", "PATH" },
+	  N_("Preselect the ISO image pointed by PATH"), "PATH" },
 	{ "device",  'd', 0, G_OPTION_ARG_STRING,   &opt_device,
-	  "Preselect the target device",             "DEVICE" },
+	  N_("Preselect the target device"),             "DEVICE" },
 	{ "filesystem", 'f', 0, G_OPTION_ARG_STRING, &opt_fs,
-	  "Preselect the file system to be preferred when formatting", "FILESYSTEM" },
+	  N_("Preselect the file system to be preferred when formatting"), "FILESYSTEM" },
 	{ "verbose", 'v', 0, G_OPTION_ARG_NONE,     &opt_verbose,
-	  "Debug-level logging", NULL },
+	  N_("Debug-level logging"), NULL },
 	{ "dry-run", 0,   0, G_OPTION_ARG_NONE,     &opt_dry_run,
-	  "Never touch a device: log what would happen", NULL },
+	  N_("Never touch a device: log what would happen"), NULL },
 	{ NULL }
 };
 
+static void init_localization(void)
+{
+	/* LANGUAGE must be selected before setlocale(). The schema is optional in
+	 * a developer build, but is always present in installed/AppImage builds. */
+	GSettingsSchemaSource *source = g_settings_schema_source_get_default();
+	GSettingsSchema *schema = source != NULL ?
+		g_settings_schema_source_lookup(source, "io.github.rufox", TRUE) : NULL;
+	if (schema != NULL) {
+		g_autoptr(GSettings) settings = g_settings_new("io.github.rufox");
+		g_autofree char *language = g_settings_get_string(settings, "language");
+		if (g_strcmp0(language, "en") == 0 || g_strcmp0(language, "ru") == 0)
+			g_setenv("LANGUAGE", language, TRUE);
+		g_settings_schema_unref(schema);
+	}
+	setlocale(LC_ALL, "");
+
+	const char *appdir = g_getenv("APPDIR");
+	g_autofree char *localedir = appdir != NULL && appdir[0] != '\0' ?
+		g_build_filename(appdir, "usr", "share", "locale", NULL) :
+		g_strdup(RUFOX_LOCALEDIR);
+	bindtextdomain("rufox", localedir);
+	bind_textdomain_codeset("rufox", "UTF-8");
+	textdomain("rufox");
+}
+
 int main(int argc, char **argv)
 {
-	setlocale(LC_ALL, "");
+	init_localization();
 
 	/* Rufus' own switches are -i/-f/-x/-g; we keep -i and -f compatible. */
 	RufoxApp *app = rufox_app_new();
-	GOptionContext *ctx = g_option_context_new("— Rufus for Linux");
-	g_option_context_add_main_entries(ctx, options, NULL);
+	GOptionContext *ctx = g_option_context_new(N_("— Rufus for Linux"));
+	g_option_context_add_main_entries(ctx, options, "rufox");
 	g_option_context_set_summary(ctx,
-		"A reliable USB formatting utility. Derived from Rufus by Pete Batard "
-		"(GPL-3.0-or-later).");
+		_("A reliable USB formatting utility. Derived from Rufus by Pete Batard "
+		  "(GPL-3.0-or-later)."));
 
 	GError *err = NULL;
 	if (!g_option_context_parse(ctx, &argc, &argv, &err)) {
-		fprintf(stderr, "rufox: %s\n", err != NULL ? err->message : "bad options");
+		fprintf(stderr, "rufox: %s\n", err != NULL ? err->message : _("bad options"));
 		g_clear_error(&err);
 		g_option_context_free(ctx);
 		g_object_unref(app);
@@ -66,14 +92,14 @@ int main(int argc, char **argv)
 			}
 		}
 		if (!valid) {
-			fprintf(stderr, "rufox-gui: unknown file system '%s'\n", opt_fs);
+			fprintf(stderr, _("rufox-gui: unknown file system '%s'\n"), opt_fs);
 			g_object_unref(app);
 			return 2;
 		}
 	}
 	rufox_app_set_startup_options(app, opt_iso, opt_device, opt_fs, opt_dry_run);
 	if (opt_dry_run)
-		uprintf("Started in dry-run mode: no device will be modified");
+		uprintf(_("Started in dry-run mode: no device will be modified"));
 
 	/* The GTK init needs to happen before anything touches Gdk. */
 	int status = g_application_run(G_APPLICATION(app), argc, argv);

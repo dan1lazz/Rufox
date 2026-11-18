@@ -158,9 +158,9 @@ static bool run_via_helper(RufoxEngine *self, RfxResult *out)
 		launcher, (const gchar *const *)full->pdata, &spawn_error);
 	if (p == NULL) {
 		*out = RFX_RESULT_FAILED;
-		self->helper_error = g_strdup_printf("Could not start the privileged helper: %s",
+		self->helper_error = g_strdup_printf(_("Could not start the privileged helper: %s"),
 		                                     spawn_error != NULL ? spawn_error->message :
-		                                     "unknown error");
+		                                     _("unknown error"));
 		return true;
 	}
 
@@ -209,14 +209,14 @@ static bool run_via_helper(RufoxEngine *self, RfxResult *out)
 	g_autoptr(GError) wait_error = NULL;
 	if (!g_subprocess_wait(p, NULL, &wait_error) && self->helper_error == NULL)
 		self->helper_error = g_strdup(wait_error != NULL ? wait_error->message :
-		                              "Could not wait for the privileged helper");
+		                              _("Could not wait for the privileged helper"));
 	if (*out == RFX_RESULT_NONE) {
 		bool ok = g_subprocess_get_if_exited(p) &&
 		          g_subprocess_get_exit_status(p) == 0;
 		*out = ok ? RFX_RESULT_SUCCESS : RFX_RESULT_FAILED;
 		if (self->helper_error == NULL)
 			self->helper_error = g_strdup(ok ? "" :
-			                              "The privileged helper exited without a result");
+			                              _("The privileged helper exited without a result"));
 	}
 	return true;
 }

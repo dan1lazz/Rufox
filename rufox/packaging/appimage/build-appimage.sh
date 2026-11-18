@@ -57,6 +57,7 @@ DESTDIR="$APPDIR" meson install -C "$BUILD_DIR"
 glib-compile-schemas "$APPDIR/usr/share/glib-2.0/schemas"
 desktop-file-validate "$APPDIR/usr/share/applications/rufox-gui.desktop"
 appstreamcli validate --no-net "$APPDIR/usr/share/metainfo/io.github.rufox.metainfo.xml"
+test -s "$APPDIR/usr/share/locale/ru/LC_MESSAGES/rufox.mo"
 
 # pkexec clears LD_LIBRARY_PATH, so the privileged helper gets a small wrapper
 # which reconstructs APPDIR from its own location instead of trusting the
@@ -92,15 +93,18 @@ chmod +x "$OUTPUT"
 # Exercise the actual packaged runtime, not just the build-tree binaries.
 "$OUTPUT" --appimage-extract-and-run --cli list
 "$OUTPUT" --appimage-extract-and-run --cli hash -i "$ROOT_DIR/data/io.github.rufox.svg" -H sha256
+LANGUAGE=ru LANG=C.UTF-8 "$OUTPUT" --appimage-extract-and-run --help >"$WORK_DIR/help-ru.log"
+grep -F 'Предварительно выбрать целевое устройство' "$WORK_DIR/help-ru.log"
 if command -v xvfb-run >/dev/null; then
   GUI_LOG="$WORK_DIR/gui-smoke.log"
   set +e
-  xvfb-run -a timeout 5s "$OUTPUT" --appimage-extract-and-run --dry-run >"$GUI_LOG" 2>&1
+  LANGUAGE=ru LANG=C.UTF-8 xvfb-run -a timeout 5s "$OUTPUT" --appimage-extract-and-run --dry-run >"$GUI_LOG" 2>&1
   GUI_RC=$?
   set -e
   cat "$GUI_LOG"
-  if [[ $GUI_RC -ne 124 ]] || grep -Eiq 'critical|error|failed to load|undefined symbol|not found' "$GUI_LOG"; then
-    printf 'Packaged GUI smoke test failed (exit %s)\n' "$GUI_RC" >&2
+  if [[ $GUI_RC -ne 124 ]] || ! grep -F 'Запущен пробный режим' "$GUI_LOG" || \
+      grep -Eiq 'critical|error|failed to load|undefined symbol|not found' "$GUI_LOG"; then
+    printf 'Packaged Russian GUI smoke test failed (exit %s)\n' "$GUI_RC" >&2
     exit 1
   fi
 fi

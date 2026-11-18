@@ -1,0 +1,371 @@
+# Russian translation for Rufox.
+# Copyright © 2026 rufox contributors
+# This file is distributed under the same license as the rufox package.
+msgid ""
+msgstr ""
+"Project-Id-Version: rufox 0.2.0\n"
+"Report-Msgid-Bugs-To: https://github.com/dan1lazz/Rufox/issues\n"
+"POT-Creation-Date: 2026-11-18 10:31+1000\n"
+"PO-Revision-Date: 2026-11-18 10:35+1000\n"
+"Last-Translator: rufox contributors\n"
+"Language-Team: Russian\n"
+"Language: ru\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && n%10<=4 && (n%100<12 || n%100>14) ? 1 : 2);\n"
+
+msgid "Preselect the ISO image pointed by PATH"
+msgstr "Предварительно выбрать ISO-образ, указанный в PATH"
+
+msgid "Preselect the target device"
+msgstr "Предварительно выбрать целевое устройство"
+
+msgid "Preselect the file system to be preferred when formatting"
+msgstr "Выбрать предпочитаемую файловую систему для форматирования"
+
+msgid "Debug-level logging"
+msgstr "Подробный журнал отладки"
+
+msgid "Never touch a device: log what would happen"
+msgstr "Не изменять устройство: только записать планируемые действия в журнал"
+
+msgid "— Rufus for Linux"
+msgstr "— Rufus для Linux"
+
+msgid ""
+"A reliable USB formatting utility. Derived from Rufus by Pete Batard "
+"(GPL-3.0-or-later)."
+msgstr ""
+"Надёжная утилита для форматирования USB-накопителей. Основана на Rufus "
+"от Pete Batard (GPL-3.0-or-later)."
+
+msgid "bad options"
+msgstr "неверные параметры"
+
+#, c-format
+msgid "rufox-gui: unknown file system '%s'\n"
+msgstr "rufox-gui: неизвестная файловая система «%s»\n"
+
+msgid "Started in dry-run mode: no device will be modified"
+msgstr "Запущен пробный режим: устройство не будет изменено"
+
+msgid "Preferences"
+msgstr "Настройки"
+
+msgid "Application"
+msgstr "Приложение"
+
+msgid "System default"
+msgstr "Как в системе"
+
+msgid "Language"
+msgstr "Язык"
+
+msgid "Choose the interface language"
+msgstr "Выберите язык интерфейса"
+
+msgid "Restart Rufox to apply the new language."
+msgstr "Перезапустите Rufox, чтобы применить выбранный язык."
+
+msgid ""
+"A Linux port of Rufus, The Reliable USB Formatting Utility.\n"
+"\n"
+"Derived from Rufus by Pete Batard <pete@akeo.ie>, licensed under the\n"
+"GNU General Public License version 3 or later. The partition geometry,\n"
+"the image analysis rules and the bootloader config patching follow\n"
+"Rufus' own implementation, so that the resulting media behaves the same.\n"
+"\n"
+"Report issues at https://github.com/dan1lazz/Rufox/issues"
+msgstr ""
+"Порт Rufus для Linux — утилиты для надёжного форматирования USB-накопителей.\n"
+"\n"
+"Основан на Rufus от Pete Batard <pete@akeo.ie> и распространяется по\n"
+"лицензии GNU General Public License версии 3 или новее. Геометрия разделов,\n"
+"правила анализа образов и изменение конфигурации загрузчиков повторяют\n"
+"реализацию Rufus, чтобы готовый накопитель вёл себя так же.\n"
+"\n"
+"Сообщения об ошибках: https://github.com/dan1lazz/Rufox/issues"
+
+#, c-format
+msgid "Could not start the privileged helper: %s"
+msgstr "Не удалось запустить помощник с повышенными правами: %s"
+
+msgid "unknown error"
+msgstr "неизвестная ошибка"
+
+msgid "Could not wait for the privileged helper"
+msgstr "Не удалось дождаться завершения помощника с повышенными правами"
+
+msgid "The privileged helper exited without a result"
+msgstr "Помощник с повышенными правами завершился без результата"
+
+#, c-format
+msgid "%s    ETA %s"
+msgstr "%s    Осталось: %s"
+
+msgid "CANCEL"
+msgstr "ОТМЕНА"
+
+msgid "START"
+msgstr "СТАРТ"
+
+msgid "No removable device found"
+msgstr "Съёмное устройство не найдено"
+
+msgid "Insert a USB stick"
+msgstr "Вставьте USB-накопитель"
+
+#, c-format
+msgid "%s — %s, %s, %u-byte sectors"
+msgstr "%s — %s, %s, размер сектора: %u байт"
+
+#, c-format
+msgid "%s — %s, %s, %u-byte sectors%s"
+msgstr "%s — %s, %s, размер сектора: %u байт%s"
+
+msgid " (mounted)"
+msgstr " (смонтировано)"
+
+msgid "A new device appeared"
+msgstr "Обнаружено новое устройство"
+
+msgid "Non bootable"
+msgstr "Незагрузочный"
+
+msgid "Disk or ISO image..."
+msgstr "Диск или ISO-образ…"
+
+#, c-format
+msgid "%u bytes"
+msgstr "%u байт"
+
+#, c-format
+msgid "%u kilobytes"
+msgstr "%u КБ"
+
+#, c-format
+msgid "%u megabytes"
+msgstr "%u МБ"
+
+msgid " (Default)"
+msgstr " (по умолчанию)"
+
+msgid "disabled"
+msgstr "отключено"
+
+#, c-format
+msgid "Done in %.1f s — you can now remove the device"
+msgstr "Готово за %.1f с — теперь устройство можно извлечь"
+
+msgid "Write complete. It is now safe to unplug the device."
+msgstr "Запись завершена. Теперь устройство можно безопасно извлечь."
+
+msgid "Cancelled"
+msgstr "Отменено"
+
+msgid "The operation was cancelled."
+msgstr "Операция отменена."
+
+#, c-format
+msgid "Failed: %s"
+msgstr "Ошибка: %s"
+
+#, c-format
+msgid ""
+"<b>%s</b>\n"
+"%s\n"
+"%s\n"
+"\n"
+"<span foreground='red'><b>ALL DATA ON THIS DEVICE WILL BE DESTROYED.</b></"
+"span>"
+msgstr ""
+"<b>%s</b>\n"
+"%s\n"
+"%s\n"
+"\n"
+"<span foreground='red'><b>ВСЕ ДАННЫЕ НА ЭТОМ УСТРОЙСТВЕ БУДУТ УНИЧТОЖЕНЫ.</b></"
+"span>"
+
+msgid "Confirm the write operation"
+msgstr "Подтвердите запись"
+
+msgid "Cancel"
+msgstr "Отмена"
+
+msgid "OK"
+msgstr "Записать"
+
+msgid "Starting…"
+msgstr "Запуск…"
+
+msgid "Cancelling…"
+msgstr "Отмена…"
+
+msgid "No device selected."
+msgstr "Устройство не выбрано."
+
+#, c-format
+msgid "Could not read the image: %s"
+msgstr "Не удалось прочитать образ: %s"
+
+msgid "That file is not a recognised image."
+msgstr "Файл не является поддерживаемым образом."
+
+msgid "This image will be written in DD (raw) mode."
+msgstr "Этот образ будет записан в режиме DD (побитовое копирование)."
+
+#, c-format
+msgid "%s — %s, projected %s%s%s"
+msgstr "%s — %s, после записи: %s%s%s"
+
+msgid "(no volume id)"
+msgstr "(без метки тома)"
+
+msgid "Could not read the selected file"
+msgstr "Не удалось прочитать выбранный файл"
+
+#, c-format
+msgid "Scanning %s…"
+msgstr "Анализ %s…"
+
+msgid "Select an image"
+msgstr "Выберите образ"
+
+msgid "SELECT"
+msgstr "ВЫБРАТЬ"
+
+msgid "Bootable images"
+msgstr "Загрузочные образы"
+
+msgid "All files"
+msgstr "Все файлы"
+
+msgid "Drive Properties"
+msgstr "Свойства накопителя"
+
+msgid "Device"
+msgstr "Устройство"
+
+msgid "Boot selection"
+msgstr "Метод загрузки"
+
+msgid "Standard Windows Installation"
+msgstr "Стандартная установка Windows"
+
+msgid "Windows Installation (no TPM, no Secure Boot, no 4GB+ RAM)"
+msgstr "Установка Windows (без TPM, Secure Boot и требования к 4+ ГБ ОЗУ)"
+
+msgid "Windows To Go"
+msgstr "Windows To Go"
+
+msgid "Image option"
+msgstr "Параметр образа"
+
+msgid "Format Options"
+msgstr "Параметры форматирования"
+
+msgid "Partition scheme"
+msgstr "Схема разделов"
+
+msgid "BIOS or UEFI-CSM"
+msgstr "BIOS или UEFI-CSM"
+
+msgid "UEFI (non CSM)"
+msgstr "UEFI (без CSM)"
+
+msgid "Target system"
+msgstr "Целевая система"
+
+msgid "File system"
+msgstr "Файловая система"
+
+msgid "Cluster size"
+msgstr "Размер кластера"
+
+msgid "Volume label"
+msgstr "Метка тома"
+
+msgid "Advanced format options"
+msgstr "Дополнительные параметры форматирования"
+
+msgid "Quick format, bad blocks, persistence, Windows tweaks"
+msgstr "Быстрое форматирование, проверка секторов, постоянное хранилище, настройки Windows"
+
+msgid "Quick format"
+msgstr "Быстрое форматирование"
+
+msgid "Create extended label and icon files"
+msgstr "Создать файлы расширенной метки и значка"
+
+msgid "Fixes for old BIOSes"
+msgstr "Исправления для старых BIOS"
+
+msgid "extra CHS-aligned gap + a compatibility partition"
+msgstr "Дополнительный промежуток с выравниванием CHS и раздел совместимости"
+
+msgid "Enable runtime UEFI media validation"
+msgstr "Включить проверку носителя UEFI во время работы"
+
+msgid "None"
+msgstr "Нет"
+
+msgid "Quick (1 pass of 0x00)"
+msgstr "Быстрая (1 проход с 0x00)"
+
+msgid "Slow (4 passes)"
+msgstr "Медленная (4 прохода)"
+
+msgid "Non-destructive (read-only)"
+msgstr "Без стирания данных (только чтение)"
+
+msgid "Check device for bad blocks"
+msgstr "Проверить устройство на повреждённые сектора"
+
+msgid "Number of passes"
+msgstr "Количество проходов"
+
+msgid "Persistent partition size"
+msgstr "Размер раздела постоянного хранилища"
+
+msgid "Ubuntu/Debian live media only"
+msgstr "Только для live-образов Ubuntu/Debian"
+
+msgid "Remove requirement for 4GB+ RAM, Secure Boot and TPM 2.0"
+msgstr "Отключить требования к 4+ ГБ ОЗУ, Secure Boot и TPM 2.0"
+
+msgid "Disable data collection (Skip privacy question)"
+msgstr "Отключить сбор данных (пропустить вопрос о конфиденциальности)"
+
+msgid "Remove Microsoft Edge from Windows 11"
+msgstr "Удалить Microsoft Edge из Windows 11"
+
+msgid "Log"
+msgstr "Журнал"
+
+msgid "READY"
+msgstr "ГОТОВО"
+
+msgid "CLOSE"
+msgstr "ЗАКРЫТЬ"
+
+msgid "rufox — Rufus for Linux"
+msgstr "rufox — Rufus для Linux"
+
+msgid "Rescan for devices"
+msgstr "Обновить список устройств"
+
+msgid "About rufox"
+msgstr "О Rufox"
+
+msgid "Rufus upstream"
+msgstr "Проект Rufus"
+
+msgid "Rufus for Linux"
+msgstr "Rufus для Linux"
+
+msgid "Ready"
+msgstr "Готово"
+
+msgid "Dry-run mode: no device will be modified."
+msgstr "Режим пробного запуска: устройство не будет изменено."

@@ -7,6 +7,7 @@
 
 #include <gtk/gtk.h>
 #include <adwaita.h>
+#include <glib/gi18n.h>
 #include "../rufox.h"
 
 G_BEGIN_DECLS

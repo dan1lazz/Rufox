@@ -16,6 +16,87 @@ struct _RufoxApp {
 
 G_DEFINE_TYPE(RufoxApp, rufox_app, ADW_TYPE_APPLICATION)
 
+typedef struct {
+	GSettings *settings;
+	GtkWidget *restart_label;
+} LanguagePrefs;
+
+static void language_prefs_free(gpointer data)
+{
+	LanguagePrefs *prefs = data;
+	g_clear_object(&prefs->settings);
+	g_free(prefs);
+}
+
+static void on_language_changed(GObject *dropdown, GParamSpec *pspec, gpointer ud)
+{
+	LanguagePrefs *prefs = ud;
+	static const char * const languages[] = { "system", "en", "ru" };
+	guint selected = gtk_drop_down_get_selected(GTK_DROP_DOWN(dropdown));
+	(void)pspec;
+	if (selected >= G_N_ELEMENTS(languages))
+		return;
+	g_settings_set_string(prefs->settings, "language", languages[selected]);
+	gtk_widget_set_visible(prefs->restart_label, TRUE);
+}
+
+static void on_preferences(GSimpleAction *action, GVariant *param, gpointer ud)
+{
+	RufoxApp *self = RUFOX_APP(ud);
+	(void)action; (void)param;
+
+	GtkWidget *window = adw_preferences_window_new();
+	gtk_window_set_title(GTK_WINDOW(window), _("Preferences"));
+	gtk_window_set_default_size(GTK_WINDOW(window), 440, 280);
+	gtk_window_set_transient_for(GTK_WINDOW(window), GTK_WINDOW(self->window));
+
+	GtkWidget *page = adw_preferences_page_new();
+	GtkWidget *group = adw_preferences_group_new();
+	adw_preferences_group_set_title(ADW_PREFERENCES_GROUP(group), _("Application"));
+	adw_preferences_page_add(ADW_PREFERENCES_PAGE(page),
+	                        ADW_PREFERENCES_GROUP(group));
+
+	GtkStringList *language_names = gtk_string_list_new((const char * const[]) {
+		_("System default"), "English", "Русский", NULL
+	});
+	GtkWidget *dropdown = gtk_drop_down_new(G_LIST_MODEL(language_names), NULL);
+	g_object_unref(language_names);
+	gtk_widget_set_valign(dropdown, GTK_ALIGN_CENTER);
+
+	GtkWidget *row = adw_action_row_new();
+	adw_preferences_row_set_title(ADW_PREFERENCES_ROW(row), _("Language"));
+	adw_action_row_set_subtitle(ADW_ACTION_ROW(row), _("Choose the interface language"));
+	adw_action_row_add_suffix(ADW_ACTION_ROW(row), dropdown);
+	adw_action_row_set_activatable_widget(ADW_ACTION_ROW(row), dropdown);
+	adw_preferences_group_add(ADW_PREFERENCES_GROUP(group), ADW_PREFERENCES_ROW(row));
+
+	GtkWidget *restart = gtk_label_new(_("Restart Rufox to apply the new language."));
+	gtk_label_set_wrap(GTK_LABEL(restart), TRUE);
+	gtk_label_set_xalign(GTK_LABEL(restart), 0.0f);
+	gtk_widget_add_css_class(restart, "dim-label");
+	gtk_widget_set_margin_top(restart, 12);
+	gtk_widget_set_margin_start(restart, 12);
+	gtk_widget_set_margin_end(restart, 12);
+	gtk_widget_set_visible(restart, FALSE);
+	adw_preferences_group_add(ADW_PREFERENCES_GROUP(group), restart);
+
+	LanguagePrefs *prefs = g_new0(LanguagePrefs, 1);
+	prefs->settings = g_settings_new("io.github.rufox");
+	prefs->restart_label = restart;
+	g_object_set_data_full(G_OBJECT(window), "rufox-language-prefs", prefs,
+	                       language_prefs_free);
+
+	g_autofree char *language = g_settings_get_string(prefs->settings, "language");
+	guint selected = g_strcmp0(language, "en") == 0 ? 1 :
+	                 g_strcmp0(language, "ru") == 0 ? 2 : 0;
+	gtk_drop_down_set_selected(GTK_DROP_DOWN(dropdown), selected);
+	g_signal_connect(dropdown, "notify::selected", G_CALLBACK(on_language_changed), prefs);
+
+	adw_preferences_window_add(ADW_PREFERENCES_WINDOW(window),
+	                          ADW_PREFERENCES_PAGE(page));
+	gtk_window_present(GTK_WINDOW(window));
+}
+
 static void on_about(GSimpleAction *action, GVariant *param, gpointer ud)
 {
 	RufoxApp *self = RUFOX_APP(ud);
@@ -30,12 +111,12 @@ static void on_about(GSimpleAction *action, GVariant *param, gpointer ud)
 	gtk_about_dialog_set_license_type(GTK_ABOUT_DIALOG(about), GTK_LICENSE_GPL_3_0_ONLY);
 	gtk_about_dialog_set_website(GTK_ABOUT_DIALOG(about), "https://github.com/dan1lazz/Rufox");
 	gtk_about_dialog_set_comments(GTK_ABOUT_DIALOG(about),
-		"A Linux port of Rufus, The Reliable USB Formatting Utility.\n\n"
-		"Derived from Rufus by Pete Batard <pete@akeo.ie>, licensed under the\n"
-		"GNU General Public License version 3 or later. The partition geometry,\n"
-		"the image analysis rules and the bootloader config patching follow\n"
-		"Rufus' own implementation, so that the resulting media behaves the same.\n\n"
-		"Report issues at https://github.com/dan1lazz/Rufox/issues");
+		_("A Linux port of Rufus, The Reliable USB Formatting Utility.\n\n"
+		  "Derived from Rufus by Pete Batard <pete@akeo.ie>, licensed under the\n"
+		  "GNU General Public License version 3 or later. The partition geometry,\n"
+		  "the image analysis rules and the bootloader config patching follow\n"
+		  "Rufus' own implementation, so that the resulting media behaves the same.\n\n"
+		  "Report issues at https://github.com/dan1lazz/Rufox/issues"));
 	gtk_about_dialog_set_copyright(GTK_ABOUT_DIALOG(about),
 		"\xc2\xa9 2011-2026 Pete Batard (Rufus)\n"
 		"\xc2\xa9 2026 rufox contributors (this port)");
@@ -76,6 +157,7 @@ static void rufox_app_startup(GApplication *app)
 	G_APPLICATION_CLASS(rufox_app_parent_class)->startup(app);
 
 	static const GActionEntry entries[] = {
+		{ "preferences", on_preferences, NULL, NULL, NULL, {} },
 		{ "about",    on_about,    NULL, NULL, NULL, {} },
 		{ "upstream", on_upstream, NULL, NULL, NULL, {} },
 		{ "quit",     on_quit,     NULL, NULL, NULL, {} },

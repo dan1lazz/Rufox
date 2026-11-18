@@ -1,7 +1,7 @@
 project(
   'rufox',
   'c',
-  version: '0.1.0',
+  version: '0.2.0',
   license: 'GPL-3.0-or-later',
   meson_version: '>= 0.59',
   default_options: [
@@ -63,8 +63,11 @@ conf.set('HAVE_GUDEV',  have_gudev)
 conf.set('HAVE_UDISKS', have_udisks)
 conf.set_quoted('RUFOX_DATADIR',  get_option('prefix') / get_option('datadir') / 'rufox')
 conf.set_quoted('RUFOX_LIBEXECDIR', get_option('prefix') / get_option('libexecdir'))
-conf.set_quoted('RUFOX_LOCALEDIR', get_option('localedir'))
+conf.set_quoted('RUFOX_LOCALEDIR', get_option('prefix') / get_option('localedir'))
 configure_file(output: 'rufox-config.h', configuration: conf)
+
+i18n = import('i18n')
+subdir('po')
 
 # 'src/ui' only exists when the GTK front-end is being built; referencing it
 # unconditionally makes `meson setup` fail for headless/CLI builds.
