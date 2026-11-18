@@ -427,6 +427,9 @@ RfxResult rfx_job_run(RfxJobHandle *h, RfxCancel *cancel)
 				o->write_mode = RFX_WRITE_AS_DD;
 			}
 		}
+		if (o->image_option == RFX_IMOP_WIN_TO_GO)
+			FAIL(ERR_NOT_SUPPORTED,
+			     "Windows To Go is not supported yet; choose Standard Windows Installation");
 		if (o->write_mode == RFX_WRITE_AS_ISO && j->Image.is_iso) {
 			if (j->Image.projected_size > j->Drive.DiskSize)
 				FAIL(ERR_IMAGE_TOO_LARGE,
@@ -542,16 +545,17 @@ RfxResult rfx_job_run(RfxJobHandle *h, RfxCancel *cancel)
 			/* Rufus analyzes the existing MBR before overwriting it. */
 			rfx_disk_analyze_mbr(dev_fd, "Drive");
 
-			/* A DD image smaller than the device leaves the previous
-			 * backup GPT at the very end of the disk, so the kernel,
-			 * parted and Windows all see a phantom GPT after the write.
-			 * Rufus guards against exactly this with ClearMBRGPT(); clear
-			 * both ends first. Non-fatal on failure, like Rufus. Pairs
-			 * with H1 so all 33 tail sectors are wiped (docs/REVIEW.md H2). */
+			/* A DD image smaller than the device leaves the previous backup
+			 * GPT at the end of the disk. Both ends must be erased before
+			 * writing; otherwise partitioning tools can resurrect a stale
+			 * layout. Failure here is fatal: continuing would risk producing
+			 * a corrupt target while still reporting success. */
 			if (!rfx_disk_clear_mbr_gpt(dev_fd, j->Drive.DiskSize,
-			                            j->Drive.SectorSize))
-				uprintfw("Could not clear the old partition records: %s",
-				         rfx_last_error_message());
+			                            j->Drive.SectorSize)) {
+				close(src_fd);
+				FAIL(ERR_WRITE_FAULT, "Could not clear the old partition records: %s",
+				     rfx_last_error_message());
+			}
 
 			if (!rfx_disk_write_image(src_fd, j->Image.image_size, dev_fd,
 			                          j->Drive.DiskSize, j->Drive.SectorSize,
@@ -787,7 +791,9 @@ RfxResult rfx_job_run(RfxJobHandle *h, RfxCancel *cancel)
 				uprintfw("Could not unmount %s", mountpoint);
 			mounted = false;
 		}
-		rfx_sync_block(dev_fd);
+		if (!rfx_sync_block(dev_fd))
+			FAIL(ERR_WRITE_FAULT, "Could not flush data to '%s': %s",
+			     j->DevicePath, strerror(errno));
 		rfx_dev_repartition_notify(j->DevicePath);
 
 		if (o->verify_after_write && o->write_mode == RFX_WRITE_AS_ISO) {

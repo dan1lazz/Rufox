@@ -1,0 +1,71 @@
+name: Build and release
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  appimage:
+    name: AppImage (${{ matrix.appimage_arch }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-22.04
+            appimage_arch: x86_64
+          - runner: ubuntu-22.04-arm
+            appimage_arch: aarch64
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y \
+            build-essential meson ninja-build pkg-config python3 curl ca-certificates \
+            file patchelf desktop-file-utils appstream libglib2.0-dev libgtk-4-dev \
+            libadwaita-1-dev libgudev-1.0-dev libudisks2-dev libblkid-dev \
+            libcdio-dev libiso9660-dev libudf-dev libparted-dev zlib1g-dev \
+            liblzma-dev dosfstools mtools ntfs-3g exfatprogs e2fsprogs \
+            syslinux-common isolinux xorriso libfuse2
+
+      - name: Build, test and package
+        run: bash rufox/packaging/appimage/build-appimage.sh
+
+      - name: Upload AppImage
+        uses: actions/upload-artifact@v4
+        with:
+          name: rufox-${{ matrix.appimage_arch }}
+          path: |
+            rufox/out/*.AppImage
+            rufox/out/*.AppImage.sha256
+          if-no-files-found: error
+
+  release:
+    name: Publish GitHub Release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: appimage
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    steps:
+      - name: Download AppImages
+        uses: actions/download-artifact@v4
+        with:
+          pattern: rufox-*
+          path: release
+          merge-multiple: true
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Rufox ${{ github.ref_name }}
+          generate_release_notes: true
+          files: release/*

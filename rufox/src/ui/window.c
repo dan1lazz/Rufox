@@ -260,14 +260,33 @@ static gboolean hotplug_poll(gpointer ud)
 	if (rufox_engine_is_running(self->engine))
 		return G_SOURCE_CONTINUE;
 
-	int before = rufox_engine_device_count(self->engine);
+	/* Count alone is insufficient: replacing /dev/sdb with another stick
+	 * leaves the count unchanged but must still refresh the visible model. */
+	GString *before = g_string_new(NULL);
+	int old_count = rufox_engine_device_count(self->engine);
+	for (int i = 0; i < old_count; i++) {
+		const RfxDrive *d = rufox_engine_get_device(self->engine, i);
+		if (d != NULL)
+			g_string_append_printf(before, "%s:%" G_GUINT64_FORMAT ":%u\n",
+			                       d->DevicePath, d->DiskSize, d->SectorSize);
+	}
 	rufox_engine_refresh_devices(self->engine);
-	int after = rufox_engine_device_count(self->engine);
-	if (before != after) {
+	GString *after = g_string_new(NULL);
+	int new_count = rufox_engine_device_count(self->engine);
+	for (int i = 0; i < new_count; i++) {
+		const RfxDrive *d = rufox_engine_get_device(self->engine, i);
+		if (d != NULL)
+			g_string_append_printf(after, "%s:%" G_GUINT64_FORMAT ":%u\n",
+			                       d->DevicePath, d->DiskSize, d->SectorSize);
+	}
+	bool changed = old_count != new_count || strcmp(before->str, after->str) != 0;
+	if (changed) {
 		repopulate_devices(self);
-		if (after > before)
+		if (new_count > old_count)
 			set_status(self, "A new device appeared");
 	}
+	g_string_free(before, TRUE);
+	g_string_free(after, TRUE);
 	return G_SOURCE_CONTINUE;
 }
 
@@ -1067,7 +1086,42 @@ static void rufox_window_init(RufoxWindow *self)
 	rufox_window_construct(self);
 }
 
-GtkWidget* rufox_window_new(RufoxApp *app)
+GtkWidget* rufox_window_new(RufoxApp *app, const char *image,
+                            const char *device, const char *filesystem,
+                            gboolean dry_run)
 {
-	return g_object_new(RUFOX_TYPE_WINDOW, "application", app, NULL);
+	GtkWidget *window = g_object_new(RUFOX_TYPE_WINDOW, "application", app, NULL);
+	RufoxWindow *self = RUFOX_WINDOW(window);
+	self->opt.dry_run = dry_run;
+
+	if (device != NULL) {
+		for (int i = 0; i < rufox_engine_device_count(self->engine); i++) {
+			const RfxDrive *d = rufox_engine_get_device(self->engine, i);
+			if (d != NULL && strcmp(d->DevicePath, device) == 0) {
+				gtk_combo_box_set_active(GTK_COMBO_BOX(self->device_combo), i);
+				break;
+			}
+		}
+	}
+	if (filesystem != NULL) {
+		for (int fs = RFX_FS_UNKNOWN + 1; fs < RFX_FS_MAX; fs++) {
+			if (g_ascii_strcasecmp(filesystem,
+			                       rfx_format_fs_name((RfxFs)fs)) == 0) {
+				combo_set_value(self->fs_combo, fs);
+				self->opt.fs_type = fs;
+				break;
+			}
+		}
+	}
+	if (image != NULL) {
+		self->image_path = g_strdup(image);
+		repopulate_boot(self);
+		combo_set_value(self->boot_combo, RFX_BT_IMAGE);
+		gtk_widget_set_sensitive(self->select_button, FALSE);
+		set_status(self, "Scanning %s…", image);
+		rufox_engine_scan_image(self->engine, image, on_scan_done, self);
+	}
+	if (dry_run)
+		show_banner(self, "Dry-run mode: no device will be modified.", TRUE);
+	return window;
 }

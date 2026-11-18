@@ -238,6 +238,113 @@ static void test_compression_sniff(void)
 }
 
 /* ----------------------------------------------------------------------- */
+static void test_clear_mbr_gpt(void)
+{
+	const uint32_t sector_sizes[] = { 512, 4096 };
+	for (guint s = 0; s < G_N_ELEMENTS(sector_sizes); s++) {
+		uint32_t sector = sector_sizes[s];
+		uint64_t disk_size = 4ULL * 1024 * 1024;
+		size_t cleared = (size_t)sector * 128;
+		char path[] = "/tmp/rufox-clear-XXXXXX";
+		int fd = mkstemp(path);
+		CHECK(fd >= 0, "create clear-gpt scratch file");
+		if (fd < 0) continue;
+		CHECK(ftruncate(fd, (off_t)disk_size) == 0, "size clear-gpt scratch file");
+
+		g_autofree uint8_t *seed = g_malloc(cleared);
+		g_autofree uint8_t *back = g_malloc(cleared);
+		memset(seed, 0xA5, cleared);
+		CHECK(rfx_write_exact(fd, seed, cleared, 0), "seed primary GPT area");
+		CHECK(rfx_write_exact(fd, seed, cleared, disk_size - cleared),
+		      "seed backup GPT area");
+		CHECK(rfx_disk_clear_mbr_gpt(fd, disk_size, sector),
+		      "clear both GPT areas with %u-byte sectors", sector);
+		CHECK(rfx_read_exact(fd, back, cleared, 0), "read primary GPT area");
+		CHECK(rfx_read_exact(fd, back, cleared, disk_size - cleared),
+		      "read backup GPT area");
+		/* Read both regions independently after the successful clear. */
+		bool zero_head = true, zero_tail = true;
+		CHECK(rfx_read_exact(fd, back, cleared, 0), "read cleared head");
+		for (size_t i = 0; i < cleared; i++) if (back[i] != 0) zero_head = false;
+		CHECK(rfx_read_exact(fd, back, cleared, disk_size - cleared), "read cleared tail");
+		for (size_t i = 0; i < cleared; i++) if (back[i] != 0) zero_tail = false;
+		CHECK(zero_head, "%u-byte sectors: primary GPT area must be zero", sector);
+		CHECK(zero_tail, "%u-byte sectors: backup GPT area must be zero", sector);
+		close(fd);
+		unlink(path);
+	}
+}
+
+static void test_dd_short_read(void)
+{
+	char src_path[] = "/tmp/rufox-short-src-XXXXXX";
+	char dst_path[] = "/tmp/rufox-short-dst-XXXXXX";
+	int src = mkstemp(src_path);
+	int dst = mkstemp(dst_path);
+	CHECK(src >= 0 && dst >= 0, "create short-read scratch files");
+	if (src < 0 || dst < 0) {
+		if (src >= 0) close(src);
+		if (dst >= 0) close(dst);
+		return;
+	}
+	uint8_t data[4096];
+	memset(data, 0x5A, sizeof(data));
+	CHECK(rfx_write_exact(src, data, sizeof(data), 0), "write short source");
+	CHECK(ftruncate(dst, 1024 * 1024) == 0, "size short-read destination");
+	rfx_clear_error();
+	CHECK(!rfx_disk_write_image(src, sizeof(data) * 2, dst, 1024 * 1024, 512,
+	                            RFX_BLED_NONE, NULL, NULL, NULL),
+	      "an image shorter than its declared size must fail");
+	CHECK_EQ(rfx_last_error(), ERR_READ_FAULT, "short read error code");
+	close(src);
+	close(dst);
+	unlink(src_path);
+	unlink(dst_path);
+}
+
+static void test_dd_roundtrip_verify(void)
+{
+	char src_path[] = "/tmp/rufox-dd-src-XXXXXX";
+	char dst_path[] = "/tmp/rufox-dd-dst-XXXXXX";
+	int src = mkstemp(src_path);
+	int dst = mkstemp(dst_path);
+	if (src < 0 || dst < 0) {
+		CHECK(false, "create DD scratch files");
+		if (src >= 0) close(src);
+		if (dst >= 0) close(dst);
+		return;
+	}
+	const size_t size = 128 * 1024;
+	g_autofree uint8_t *data = g_malloc(size);
+	for (size_t i = 0; i < size; i++) data[i] = (uint8_t)(i * 31 + 7);
+	CHECK(rfx_write_exact(src, data, size, 0), "write DD source");
+	CHECK(ftruncate(dst, 1024 * 1024) == 0, "size DD destination");
+	CHECK(rfx_disk_write_image(src, size, dst, 1024 * 1024, 512,
+	                           RFX_BLED_NONE, NULL, NULL, NULL), "DD write");
+	CHECK(rfx_disk_verify_image(src, size, dst, 512, NULL, NULL, NULL),
+	      "matching DD verification");
+	uint8_t wrong = data[12345] ^ 0xFF;
+	CHECK(rfx_write_exact(dst, &wrong, 1, 12345), "corrupt DD destination");
+	rfx_clear_error();
+	CHECK(!rfx_disk_verify_image(src, size, dst, 512, NULL, NULL, NULL),
+	      "corrupt destination must fail verification");
+	CHECK_EQ(rfx_last_error(), ERR_VERIFY_MISMATCH, "verification error code");
+	close(src);
+	close(dst);
+	unlink(src_path);
+	unlink(dst_path);
+}
+
+static void test_wintogo_refusal(void)
+{
+	CHECK(!rfx_wintogo_supported(NULL), "Windows To Go capability must be honest");
+	rfx_clear_error();
+	CHECK(!rfx_wintogo_create(NULL, NULL, NULL, NULL, NULL, NULL),
+	      "Windows To Go must refuse instead of pretending to write");
+	CHECK_EQ(rfx_last_error(), ERR_NOT_SUPPORTED, "Windows To Go error code");
+}
+
+/* ----------------------------------------------------------------------- */
 int main(void)
 {
 	rfx_log_set_level(RFX_LOG_ERROR);	/* keep the test output readable */
@@ -250,6 +357,10 @@ int main(void)
 	test_mbr_surgery();
 	test_iso_scan();
 	test_compression_sniff();
+	test_clear_mbr_gpt();
+	test_dd_short_read();
+	test_dd_roundtrip_verify();
+	test_wintogo_refusal();
 
 	printf("%d checks, %d failure(s)\n", checks, failures);
 	return failures == 0 ? 0 : 1;

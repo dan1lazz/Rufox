@@ -57,6 +57,21 @@ int main(int argc, char **argv)
 
 	if (opt_verbose)
 		rfx_log_set_level(RFX_LOG_DEBUG);
+	if (opt_fs != NULL) {
+		bool valid = false;
+		for (int fs = RFX_FS_UNKNOWN + 1; fs < RFX_FS_MAX; fs++) {
+			if (g_ascii_strcasecmp(opt_fs, rfx_format_fs_name((RfxFs)fs)) == 0) {
+				valid = true;
+				break;
+			}
+		}
+		if (!valid) {
+			fprintf(stderr, "rufox-gui: unknown file system '%s'\n", opt_fs);
+			g_object_unref(app);
+			return 2;
+		}
+	}
+	rufox_app_set_startup_options(app, opt_iso, opt_device, opt_fs, opt_dry_run);
 	if (opt_dry_run)
 		uprintf("Started in dry-run mode: no device will be modified");
 

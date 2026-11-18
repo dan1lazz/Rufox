@@ -1,0 +1,20 @@
+# Build trees and packaging output
+build/
+build-*/
+out/
+AppDir/
+*.AppImage
+*.AppImage.zsync
+
+# Local test-machine credentials (never commit them)
+.vm-id_*
+
+# Editors and macOS
+.DS_Store
+*~
+*.swp
+
+# Meson logs and coverage
+meson-logs/
+meson-private/
+.coveragerc

@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+  <defs>
+    <linearGradient id="bg" x1="32" y1="24" x2="224" y2="232" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#ff9b45"/>
+      <stop offset="1" stop-color="#e34d25"/>
+    </linearGradient>
+    <linearGradient id="fox" x1="128" y1="58" x2="128" y2="190" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#fff8ef"/>
+      <stop offset="1" stop-color="#ffe5cd"/>
+    </linearGradient>
+  </defs>
+  <rect x="8" y="8" width="240" height="240" rx="56" fill="url(#bg)"/>
+  <path d="M48 62 94 82h68l46-20-12 73c-5 35-33 63-68 75-35-12-63-40-68-75Z" fill="#742d25" opacity=".32"/>
+  <path d="M48 52 99 78h58l51-26-12 79c-5 32-32 58-68 70-36-12-63-38-68-70Z" fill="url(#fox)"/>
+  <path d="m48 52 51 26-25 26-20-19Zm160 0-51 26 25 26 20-19Z" fill="#ffbf82"/>
+  <path d="m75 119 28 9-18 13Zm106 0-28 9 18 13Z" fill="#332d35"/>
+  <path d="M128 140c-15 0-24 10-24 19 0 12 11 22 24 22s24-10 24-22c0-9-9-19-24-19Z" fill="#fff"/>
+  <path d="M116 155h24l-12 13Z" fill="#332d35"/>
+  <path d="M110 204v22c0 7 5 12 12 12h12c7 0 12-5 12-12v-22" fill="#f5f7fa"/>
+  <path d="M110 215h36v14c0 5-4 9-9 9h-18c-5 0-9-4-9-9Z" fill="#c8d0da"/>
+  <path d="M120 219v10m16-10v10" stroke="#6d7680" stroke-width="4" stroke-linecap="round"/>
+</svg>

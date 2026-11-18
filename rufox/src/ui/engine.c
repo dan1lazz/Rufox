@@ -37,6 +37,12 @@ struct _RufoxEngine {
 	 * thread; the queue keeps the two apart. */
 	GAsyncQueue  *progress_q;
 	GAsyncQueue  *log_q;
+	gint          progress_pending;
+	gint          log_pending;
+
+	/* The helper reports these in its line protocol, not through RfxJob. */
+	char         *helper_error;
+	double        helper_seconds;
 
 	RfxDevList   *devices;
 };
@@ -53,13 +59,27 @@ typedef struct {
 	char        line[1024];
 } LogItem;
 
+static void schedule_progress(RufoxEngine *self)
+{
+	if (g_atomic_int_compare_and_exchange(&self->progress_pending, 0, 1))
+		g_idle_add_full(G_PRIORITY_DEFAULT_IDLE, rufox_engine_drain_progress,
+		                g_object_ref(self), g_object_unref);
+}
+
+static void schedule_log(RufoxEngine *self)
+{
+	if (g_atomic_int_compare_and_exchange(&self->log_pending, 0, 1))
+		g_idle_add_full(G_PRIORITY_DEFAULT_IDLE, rufox_engine_drain_log,
+		                g_object_ref(self), g_object_unref);
+}
+
 static void engine_on_progress(const RfxProgress *p, gpointer ud)
 {
 	RufoxEngine *self = RUFOX_ENGINE(ud);
 	ProgressItem *it = g_new0(ProgressItem, 1);
 	it->p = *p;
 	g_async_queue_push(self->progress_q, it);
-	g_idle_add(rufox_engine_drain_progress, self);
+	schedule_progress(self);
 }
 
 static void engine_on_log(RfxLogLevel lvl, const char *line, gpointer ud)
@@ -67,15 +87,16 @@ static void engine_on_log(RfxLogLevel lvl, const char *line, gpointer ud)
 	RufoxEngine *self = RUFOX_ENGINE(ud);
 	LogItem *it = g_new0(LogItem, 1);
 	it->lvl = lvl;
-	g_strlcpy(it->line, line, sizeof(it->line));
+	g_strlcpy(it->line, line != NULL ? line : "", sizeof(it->line));
 	g_async_queue_push(self->log_q, it);
-	g_idle_add(rufox_engine_drain_log, self);
+	schedule_log(self);
 }
 
 gboolean rufox_engine_drain_progress(gpointer ud)
 {
 	RufoxEngine *self = RUFOX_ENGINE(ud);
 	ProgressItem *it;
+	g_atomic_int_set(&self->progress_pending, 0);
 	while ((it = g_async_queue_try_pop(self->progress_q)) != NULL) {
 		g_signal_emit(self, signals[SIG_PROGRESS], 0, &it->p);
 		g_free(it);
@@ -87,6 +108,7 @@ gboolean rufox_engine_drain_log(gpointer ud)
 {
 	RufoxEngine *self = RUFOX_ENGINE(ud);
 	LogItem *it;
+	g_atomic_int_set(&self->log_pending, 0);
 	while ((it = g_async_queue_try_pop(self->log_q)) != NULL) {
 		g_signal_emit(self, signals[SIG_LOG], 0, (int)it->lvl, it->line);
 		g_free(it);
@@ -102,8 +124,15 @@ gboolean rufox_engine_drain_log(gpointer ud)
  */
 static bool run_via_helper(RufoxEngine *self, RfxResult *out)
 {
-	const char *libexec = RUFOX_LIBEXECDIR;
-	g_autofree char *helper = g_build_filename(libexec, "rufox-helper", NULL);
+	g_autofree char *helper = NULL;
+	const char *configured = g_getenv("RUFOX_HELPER");
+	const char *appdir = g_getenv("APPDIR");
+	if (configured != NULL && configured[0] != '\0')
+		helper = g_strdup(configured);
+	else if (appdir != NULL && appdir[0] != '\0')
+		helper = g_build_filename(appdir, "usr", "libexec", "rufox-helper", NULL);
+	else
+		helper = g_build_filename(RUFOX_LIBEXECDIR, "rufox-helper", NULL);
 	if (!g_file_test(helper, G_FILE_TEST_IS_EXECUTABLE))
 		return false;
 
@@ -115,31 +144,30 @@ static bool run_via_helper(RufoxEngine *self, RfxResult *out)
 	o.opt = j->Options;
 
 	g_autoptr(GPtrArray) argv = rfx_cli_job_argv(helper, &o);
-	/* Prepend pkexec when we are not root ourselves. */
-	GPtrArray *full = g_ptr_array_new_with_free_func(g_free);
+	g_autoptr(GPtrArray) full = g_ptr_array_new_with_free_func(g_free);
 	if (!rfx_is_root())
 		g_ptr_array_add(full, g_strdup("pkexec"));
 	for (guint i = 0; i < argv->len; i++)
 		g_ptr_array_add(full, g_strdup(g_ptr_array_index(argv, i)));
 	g_ptr_array_add(full, NULL);
 
-	GSubprocess *p = g_subprocess_launcher_new(
-		G_SUBPROCESS_FLAGS_STDOUT_PIPE | G_SUBPROCESS_FLAGS_STDERR_MERGE) != NULL
-		? g_subprocess_launcher_spawnv(
-			g_subprocess_launcher_new(G_SUBPROCESS_FLAGS_STDOUT_PIPE |
-			                          G_SUBPROCESS_FLAGS_STDERR_MERGE),
-			(const gchar *const *)full->pdata, NULL)
-		: NULL;
-	g_ptr_array_free(full, TRUE);
-	if (p == NULL)
-		return false;
+	g_autoptr(GSubprocessLauncher) launcher = g_subprocess_launcher_new(
+		G_SUBPROCESS_FLAGS_STDOUT_PIPE | G_SUBPROCESS_FLAGS_STDERR_MERGE);
+	g_autoptr(GError) spawn_error = NULL;
+	g_autoptr(GSubprocess) p = g_subprocess_launcher_spawnv(
+		launcher, (const gchar *const *)full->pdata, &spawn_error);
+	if (p == NULL) {
+		*out = RFX_RESULT_FAILED;
+		self->helper_error = g_strdup_printf("Could not start the privileged helper: %s",
+		                                     spawn_error != NULL ? spawn_error->message :
+		                                     "unknown error");
+		return true;
+	}
 
 	GInputStream *in = g_subprocess_get_stdout_pipe(p);
 	g_autoptr(GDataInputStream) dis = g_data_input_stream_new(in);
 	char *line;
-	*out = RFX_RESULT_FAILED;
-	double seconds = 0;
-	gchar *errmsg = NULL;
+	*out = RFX_RESULT_NONE;
 
 	while ((line = g_data_input_stream_read_line_utf8(dis, NULL, NULL, NULL)) != NULL) {
 		if (g_str_has_prefix(line, "PROGRESS ")) {
@@ -157,36 +185,39 @@ static bool run_via_helper(RufoxEngine *self, RfxResult *out)
 				pr.speed_bps = bps;
 				pr.eta_seconds = eta;
 				g_snprintf(pr.message, sizeof(pr.message), "%s", msg);
-				g_async_queue_push(self->progress_q, g_memdup2(&pr, sizeof(pr)));
-				g_idle_add(rufox_engine_drain_progress, self);
+				engine_on_progress(&pr, self);
 			}
 		} else if (g_str_has_prefix(line, "LOG ")) {
-			LogItem *it = g_new0(LogItem, 1);
 			int lvl = 0;
-			sscanf(line, "LOG %d %1023[^\n]", &lvl, it->line);
-			it->lvl = (RfxLogLevel)lvl;
-			g_async_queue_push(self->log_q, it);
-			g_idle_add(rufox_engine_drain_log, self);
+			char msg[1024] = "";
+			sscanf(line, "LOG %d %1023[^\n]", &lvl, msg);
+			engine_on_log((RfxLogLevel)lvl, msg, self);
 		} else if (g_str_has_prefix(line, "RESULT ")) {
 			char verdict[16] = "";
 			char msg[512] = "";
-			sscanf(line, "RESULT %15s %lf %511[^\n]", verdict, &seconds, msg);
+			sscanf(line, "RESULT %15s %lf %511[^\n]", verdict,
+			       &self->helper_seconds, msg);
 			*out = strcmp(verdict, "success") == 0 ? RFX_RESULT_SUCCESS :
 			       strcmp(verdict, "cancelled") == 0 ? RFX_RESULT_CANCELLED :
 			       RFX_RESULT_FAILED;
-			g_free(errmsg);
-			errmsg = g_strdup(msg);
+			g_free(self->helper_error);
+			self->helper_error = g_strdup(msg);
 		}
 		g_free(line);
 	}
 
-	g_subprocess_wait(p, NULL, NULL);
-	int st = g_subprocess_get_exit_status(p);
-	g_object_unref(p);
-	if (*out == RFX_RESULT_NONE)
-		*out = (st == 0) ? RFX_RESULT_SUCCESS : RFX_RESULT_FAILED;
-	g_free(errmsg);
-	(void)seconds;
+	g_autoptr(GError) wait_error = NULL;
+	if (!g_subprocess_wait(p, NULL, &wait_error) && self->helper_error == NULL)
+		self->helper_error = g_strdup(wait_error != NULL ? wait_error->message :
+		                              "Could not wait for the privileged helper");
+	if (*out == RFX_RESULT_NONE) {
+		bool ok = g_subprocess_get_if_exited(p) &&
+		          g_subprocess_get_exit_status(p) == 0;
+		*out = ok ? RFX_RESULT_SUCCESS : RFX_RESULT_FAILED;
+		if (self->helper_error == NULL)
+			self->helper_error = g_strdup(ok ? "" :
+			                              "The privileged helper exited without a result");
+	}
 	return true;
 }
 
@@ -207,6 +238,7 @@ static void worker_task(GTask *task, gpointer source, gpointer data, GCancellabl
 static void worker_done(GObject *src, GAsyncResult *res, gpointer ud)
 {
 	RufoxEngine *self = RUFOX_ENGINE(ud);
+	(void)src;
 	GError *err = NULL;
 	gssize r = g_task_propagate_int(G_TASK(res), &err);
 
@@ -214,9 +246,13 @@ static void worker_done(GObject *src, GAsyncResult *res, gpointer ud)
 	rfx_log_set_callback(NULL, NULL);
 
 	RfxJob *j = rfx_job_peek(self->job);
-	g_signal_emit(self, signals[SIG_FINISHED], 0, (int)r,
-	              j != NULL ? j->ErrorMessage : "",
-	              j != NULL ? j->ElapsedSeconds : 0.0);
+	const char *message = self->helper_error != NULL ? self->helper_error :
+	                      (j != NULL ? j->ErrorMessage : "");
+	double seconds = self->helper_seconds > 0 ? self->helper_seconds :
+	                 (j != NULL ? j->ElapsedSeconds : 0.0);
+	if (err != NULL && (message == NULL || message[0] == '\0'))
+		message = err->message;
+	g_signal_emit(self, signals[SIG_FINISHED], 0, (int)r, message, seconds);
 	g_clear_error(&err);
 	g_clear_object(&self->task);
 	g_object_unref(self);
@@ -241,6 +277,7 @@ static void rufox_engine_finalize(GObject *obj)
 	g_clear_pointer(&self->cancel, rfx_cancel_free);
 	g_clear_pointer(&self->progress_q, g_async_queue_unref);
 	g_clear_pointer(&self->log_q, g_async_queue_unref);
+	g_clear_pointer(&self->helper_error, g_free);
 	G_OBJECT_CLASS(rufox_engine_parent_class)->finalize(obj);
 }
 
@@ -309,6 +346,12 @@ void rufox_engine_start(RufoxEngine *self)
 {
 	if (self->running) return;
 	self->running = TRUE;
+
+	/* A cancelled token must not leak into the next operation. */
+	g_clear_pointer(&self->cancel, rfx_cancel_free);
+	self->cancel = rfx_cancel_new();
+	g_clear_pointer(&self->helper_error, g_free);
+	self->helper_seconds = 0;
 
 	/* Route the engine's log into the GUI's log pane as well as stderr. */
 	rfx_log_set_callback(engine_on_log, self);

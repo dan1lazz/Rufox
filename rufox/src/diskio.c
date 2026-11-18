@@ -215,23 +215,26 @@ bool rfx_disk_clear_mbr_gpt(int fd, uint64_t disk_size, uint32_t sector_size)
 	char tmp[32];
 	uprintf("Zeroed %s at the top of the drive", rfx_human_size(buf_len, tmp, sizeof(tmp)));
 
-	/* The backup GPT lives at the very end. Rufus treats a failure here as
-	 * non-fatal (Windows holds a lock on it); we do the same. */
-	/* Backup GPT = 1 header + 32 table sectors = 33 sectors. Rufus clears
-	 * MAX_SECTORS_TO_CLEAR at *both* ends; clearing only buf_len/8 (16
-	 * sectors) left the backup partition table alive and the kernel/parted
-	 * then saw a phantom GPT (docs/REVIEW.md H1). */
+	/* Backup GPT = 1 header + 32 table sectors = 33 sectors. Clear the same
+	 * safety margin at both ends. A stale backup GPT is not harmless: after a
+	 * smaller DD write it can make the kernel and partitioning tools resurrect
+	 * the previous layout. Never hide a failed tail erase or sync behind a
+	 * successful return value. */
 	size_t tail_len = buf_len;
 	if (disk_size > tail_len) {
-		if (write_with_retry(fd, buf, tail_len, disk_size - tail_len, NULL)) {
-			uprintf("Zeroed %s at the end of the drive",
-			        rfx_human_size(tail_len, tmp, sizeof(tmp)));
-		} else {
-			uprintfw("Could not clear the backup GPT area: %s", strerror(errno));
-			rfx_clear_error();
+		if (!write_with_retry(fd, buf, tail_len, disk_size - tail_len, NULL)) {
+			rfx_set_error(ERR_WRITE_FAULT, errno,
+			              "Could not zero the backup GPT area at the end of the drive");
+			return false;
 		}
+		uprintf("Zeroed %s at the end of the drive",
+		        rfx_human_size(tail_len, tmp, sizeof(tmp)));
 	}
-	rfx_sync_block(fd);
+	if (!rfx_sync_block(fd)) {
+		rfx_set_error(ERR_WRITE_FAULT, errno,
+		              "Could not flush the cleared partition records to the drive");
+		return false;
+	}
 	return true;
 }
 
@@ -325,7 +328,12 @@ bool rfx_disk_zero(int fd, uint64_t size, uint32_t sector_size, bool fast,
 		uprint_progress(written, size);
 	}
 
-	rfx_sync_block(fd);
+	if (!rfx_sync_block(fd)) {
+		g_timer_destroy(timer);
+		return rfx_fail(ERR_WRITE_FAULT,
+		                "Could not flush the zeroed data to the drive: %s",
+		                strerror(errno));
+	}
 	g_timer_destroy(timer);
 	uprintf("\n");
 	return true;
@@ -385,7 +393,9 @@ bool rfx_disk_write_image(int src_fd, uint64_t src_size, int dst_fd,
 			g_timer_destroy(timer);
 			if (r < 0)
 				return rfx_fail(ERR_READ_FAULT, "Read error: %s", strerror(errno));
-			break;	/* clean EOF */
+			return rfx_fail(ERR_READ_FAULT,
+			                "Image ended unexpectedly at offset %" G_GUINT64_FORMAT
+			                " of %" G_GUINT64_FORMAT " bytes", done, target);
 		}
 		if (!write_with_retry(dst_fd, buf, (size_t)r, done, cancel)) {
 			g_timer_destroy(timer);
@@ -406,7 +416,12 @@ bool rfx_disk_write_image(int src_fd, uint64_t src_size, int dst_fd,
 		uprint_progress(done, target);
 	}
 
-	rfx_sync_block(dst_fd);
+	if (!rfx_sync_block(dst_fd)) {
+		g_timer_destroy(timer);
+		return rfx_fail(ERR_WRITE_FAULT,
+		                "Could not flush the written image to the drive: %s",
+		                strerror(errno));
+	}
 	double el = g_timer_elapsed(timer, NULL);
 	g_timer_destroy(timer);
 
@@ -432,11 +447,13 @@ bool rfx_disk_verify_image(int src_fd, uint64_t src_size, int dst_fd,
 	/* dst_fd is the same handle we just wrote through, so the block device's
 	 * page cache still holds our own data: pread() below would compare the
 	 * cache against itself and always "pass". Drop the cache first so we
-	 * actually re-read the media (docs/REVIEW.md H5). On a regular file
-	 * target BLKFLSBUF is not supported and returns EINVAL/ENOTTY — ignore. */
+	 * actually re-read the media. Regular file targets reject BLKFLSBUF with
+	 * EINVAL/ENOTTY; every other failure must abort verification. */
 #ifdef BLKFLSBUF
 	if (ioctl(dst_fd, BLKFLSBUF, 0) != 0 && errno != EINVAL && errno != ENOTTY)
-		uprintfw("Could not flush the device buffer cache: %s", strerror(errno));
+		return rfx_fail(ERR_READ_FAULT,
+		                "Could not flush the device buffer cache before verification: %s",
+		                strerror(errno));
 #endif
 
 	GTimer *t = g_timer_new();

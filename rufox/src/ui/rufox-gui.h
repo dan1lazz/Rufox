@@ -47,8 +47,13 @@ G_DECLARE_FINAL_TYPE(RufoxApp, rufox_app, RUFOX, APP, AdwApplication)
 #define RUFOX_TYPE_WINDOW (rufox_window_get_type())
 G_DECLARE_FINAL_TYPE(RufoxWindow, rufox_window, RUFOX, WINDOW, AdwApplicationWindow)
 
-GtkWidget* rufox_window_new(RufoxApp *app);
+GtkWidget* rufox_window_new(RufoxApp *app, const char *image,
+                            const char *device, const char *filesystem,
+                            gboolean dry_run);
 RufoxApp*  rufox_app_new(void);
+void       rufox_app_set_startup_options(RufoxApp *app, const char *image,
+                                         const char *device, const char *filesystem,
+                                         gboolean dry_run);
 
 G_END_DECLS
 

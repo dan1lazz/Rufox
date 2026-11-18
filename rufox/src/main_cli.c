@@ -134,12 +134,11 @@ static int cmd_list(bool extra_devs)
 			char psz[32], poff[32];
 			rfx_human_size(d->Partition[p].Size, psz, sizeof(psz));
 			rfx_human_size(d->Partition[p].Offset, poff, sizeof(poff));
-			printf("  %-12s └ %-8s @ %-9s %s%s%s\n", "",
+			printf("  %-12s └ %-8s @ %-9s %s", "",
 			       psz, poff,
-			       d->Partition[p].FsName[0] ? d->Partition[p].FsName : "?",
-			       d->Partition[p].Name[0] ? "  \"" : "",
-			       d->Partition[p].Name[0] ? d->Partition[p].Name : "");
-			if (d->Partition[p].Name[0]) printf("\"");
+			       d->Partition[p].FsName[0] ? d->Partition[p].FsName : "?");
+			if (d->Partition[p].Name[0])
+				printf("  \"%s\"", d->Partition[p].Name);
 			printf("\n");
 		}
 	}

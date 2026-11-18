@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.rufox</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+  <name>Rufox</name>
+  <summary>Create bootable USB drives on Linux</summary>
+  <developer id="io.github.rufox">
+    <name>Rufox contributors</name>
+  </developer>
+  <launchable type="desktop-id">rufox-gui.desktop</launchable>
+  <description>
+    <p>Rufox is a GTK4 and libadwaita USB formatting utility for Linux, based on the partitioning and image-processing logic of Rufus.</p>
+    <p>It supports ISO extraction and raw DD writing, MBR and GPT layouts, UEFI and BIOS targets, file-system creation, bad-block checks, image hashing and write verification.</p>
+    <p>Windows To Go is not available yet. Always check the selected device: writing an image erases its existing data.</p>
+  </description>
+  <url type="homepage">https://github.com/dan1lazz/Rufox</url>
+  <url type="bugtracker">https://github.com/dan1lazz/Rufox/issues</url>
+  <url type="vcs-browser">https://github.com/dan1lazz/Rufox</url>
+  <screenshots>
+    <screenshot type="default">
+      <image>https://raw.githubusercontent.com/dan1lazz/Rufox/main/rufox/docs/screenshot.png</image>
+      <caption>Rufox main window</caption>
+    </screenshot>
+  </screenshots>
+  <content_rating type="oars-1.1"/>
+  <releases>
+    <release version="0.1.0" date="2026-11-18">
+      <description>
+        <p>First packaged release with x86_64 and ARM64 AppImages, a graphical interface and a command-line interface.</p>
+      </description>
+    </release>
+  </releases>
+</component>

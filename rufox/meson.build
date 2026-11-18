@@ -1,14 +1,14 @@
 project(
-  'rufus-linux',
+  'rufox',
   'c',
-  version: '4.15.0',
+  version: '0.1.0',
   license: 'GPL-3.0-or-later',
   meson_version: '>= 0.59',
   default_options: [
     'c_std=gnu11',
     'warning_level=2',
     'werror=false',
-    'buildtype=debug',
+    'buildtype=debugoptimized',
   ],
 )
 
@@ -16,6 +16,7 @@ cc = meson.get_compiler('c')
 
 add_project_arguments(
   '-D_GNU_SOURCE',
+  '-DRUFOX_VERSION_STR="@0@"'.format(meson.project_version()),
   '-DRUFUS_LINUX_VERSION="@0@"'.format(meson.project_version()),
   language: 'c',
 )
@@ -92,7 +93,7 @@ core_src = files(
   'src/hash.c',
   'src/badblocks.c',
   'src/persistence.c',
-  'src/wintogo_stub.c',
+  'src/wintogo.c',
   'src/job.c',
 )
 
@@ -155,6 +156,12 @@ if have_gtk and have_adw
                install_dir: get_option('datadir') / 'applications')
   install_data('data/rufox.gschema.xml',
                install_dir: get_option('datadir') / 'glib-2.0' / 'schemas')
+  install_data('data/io.github.rufox.svg',
+               install_dir: get_option('datadir') / 'icons' / 'hicolor' / 'scalable' / 'apps')
+  install_data('data/io.github.rufox.png',
+               install_dir: get_option('datadir') / 'icons' / 'hicolor' / '256x256' / 'apps')
+  install_data('data/io.github.rufox.metainfo.xml',
+               install_dir: get_option('datadir') / 'metainfo')
 endif
 
 # ---------------------------------------------------------------------------

@@ -1,6 +1,11 @@
 /*
- * STUB wintogo.c — создан ревьюером ТОЛЬКО для диагностики сборки.
- * Оригинальный src/wintogo.c в архиве отсутствует.
+ * rufox — Windows To Go capability
+ *
+ * Windows To Go needs WIM image selection, deployment and boot configuration.
+ * Until that pipeline is implemented, fail explicitly instead of presenting a
+ * regular Windows installation USB as a working Windows To Go drive.
+ *
+ * SPDX-License-Identifier: GPL-3.0-or-later
  */
 #include "rufox.h"
 
@@ -21,6 +26,7 @@ bool rfx_wintogo_create(const char *devpart, const RfxImgReport *img,
                         RfxCancel *cancel)
 {
 	(void)devpart; (void)img; (void)opt; (void)cb; (void)ud; (void)cancel;
-	rfx_set_error(ERR_MISSING_TOOL, 0, "wintogo.c missing from the archive");
+	rfx_set_error(ERR_NOT_SUPPORTED, 0,
+	              "Windows To Go is not supported yet; create a standard Windows installation USB instead");
 	return false;
 }

@@ -1,11 +1,12 @@
 [Desktop Entry]
 Type=Application
-Name=rufox
+Name=Rufox
 GenericName=USB Formatting Utility
-Comment=Write ISO and disk images to USB drives, the way Rufus does on Windows
+Comment=Create bootable USB drives from ISO and disk images
 Exec=rufox-gui
-Icon=drive-removable-media
+Icon=io.github.rufox
 Terminal=false
-Categories=Utility;System;Filesystem;
-Keywords=usb;iso;boot;install;image;dd;
+Categories=Utility;
+Keywords=usb;iso;boot;install;image;dd;rufus;
 StartupNotify=true
+X-GNOME-UsesNotifications=true

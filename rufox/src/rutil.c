@@ -87,6 +87,7 @@ const char* rfx_strerror(RfxError e)
 	case ERR_NOT_AN_IMAGE:      return "Not a recognised image file";
 	case ERR_MISSING_TOOL:      return "A required external tool is missing";
 	case ERR_VERIFY_MISMATCH:   return "Verification failed: data mismatch";
+	case ERR_NOT_SUPPORTED:     return "Operation is not supported yet";
 	case ERR_INTERNAL:          return "Internal error";
 	default:                    return "Unknown error";
 	}

@@ -407,6 +407,7 @@ typedef enum {
 	ERR_NOT_AN_IMAGE,
 	ERR_MISSING_TOOL,
 	ERR_VERIFY_MISMATCH,
+	ERR_NOT_SUPPORTED,
 	ERR_INTERNAL,
 	ERR_MAX
 } RfxError;
@@ -594,7 +595,7 @@ bool     rfx_format_partition(const RfxPartTarget *target, RfxFs fs,
 uint32_t rfx_format_default_cluster_size(RfxFs fs, uint64_t part_size);
 bool     rfx_format_fs_supported(RfxFs fs);
 const char* rfx_format_fs_name(RfxFs fs);
-bool     rfx_format_allowed_fs(int partition_style, int target_type,
+bool     rfx_format_allowed_fs(int boot_type, int target_type,
                                const RfxImgReport *img, RfxFs *out, int *n_out);
 bool     rfx_format_label_valid(RfxFs fs, const char *label, char *out, size_t out_size);
 bool     rfx_format_write_extended_label(const char *mountpoint, const char *label);
@@ -639,7 +640,7 @@ bool rfx_boot_freedos_available(void);
 const char* rfx_boot_find_resource(const char *name);
 
 /* ----------------------------------------------------------------------- */
-/* hash.c / badblocks.c / persistence.c / wintogo.c                        */
+/* hash.c / badblocks.c / persistence.c / Windows To Go capability         */
 /* ----------------------------------------------------------------------- */
 bool rfx_hash_file(const char *path, RfxHashType type, char *out_hex,
                    size_t out_size, RfxProgressCb cb, gpointer ud,

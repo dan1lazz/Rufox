@@ -8,6 +8,10 @@
 struct _RufoxApp {
 	AdwApplication parent;
 	GtkWidget *window;
+	char *startup_image;
+	char *startup_device;
+	char *startup_fs;
+	gboolean startup_dry_run;
 };
 
 G_DEFINE_TYPE(RufoxApp, rufox_app, ADW_TYPE_APPLICATION)
@@ -18,15 +22,14 @@ static void on_about(GSimpleAction *action, GVariant *param, gpointer ud)
 	(void)action; (void)param;
 
 	GtkWidget *about = adw_about_window_new();
-	adw_about_window_set_application_name(ADW_ABOUT_WINDOW(about), "rufox");
-	adw_about_window_set_application_icon(ADW_ABOUT_WINDOW(about),
-	                                      "drive-removable-media");
+	adw_about_window_set_application_name(ADW_ABOUT_WINDOW(about), "Rufox");
+	adw_about_window_set_application_icon(ADW_ABOUT_WINDOW(about), "io.github.rufox");
 	adw_about_window_set_version(ADW_ABOUT_WINDOW(about), RUFOX_VERSION_STR);
 	adw_about_window_set_developer_name(ADW_ABOUT_WINDOW(about), "rufox contributors");
 	adw_about_window_set_license_type(ADW_ABOUT_WINDOW(about), GTK_LICENSE_GPL_3_0_ONLY);
-	adw_about_window_set_website(ADW_ABOUT_WINDOW(about), "https://github.com/pbatard/rufus");
+	adw_about_window_set_website(ADW_ABOUT_WINDOW(about), "https://github.com/dan1lazz/Rufox");
 	adw_about_window_set_issue_url(ADW_ABOUT_WINDOW(about),
-	                               "https://github.com/pbatard/rufus/issues");
+	                               "https://github.com/dan1lazz/Rufox/issues");
 	adw_about_window_set_comments(ADW_ABOUT_WINDOW(about),
 		"A Linux port of Rufus, The Reliable USB Formatting Utility.\n\n"
 		"Derived from Rufus by Pete Batard <pete@akeo.ie>, licensed under the\n"
@@ -62,7 +65,9 @@ static void app_activate(GApplication *app)
 {
 	RufoxApp *self = RUFOX_APP(app);
 	if (self->window == NULL)
-		self->window = rufox_window_new(self);
+		self->window = rufox_window_new(self, self->startup_image,
+		                                self->startup_device, self->startup_fs,
+		                                self->startup_dry_run);
 	gtk_window_present(GTK_WINDOW(self->window));
 }
 
@@ -87,10 +92,20 @@ static void rufox_app_startup(GApplication *app)
 	g_object_unref(prov);
 }
 
+static void rufox_app_finalize(GObject *obj)
+{
+	RufoxApp *self = RUFOX_APP(obj);
+	g_clear_pointer(&self->startup_image, g_free);
+	g_clear_pointer(&self->startup_device, g_free);
+	g_clear_pointer(&self->startup_fs, g_free);
+	G_OBJECT_CLASS(rufox_app_parent_class)->finalize(obj);
+}
+
 static void rufox_app_class_init(RufoxAppClass *klass)
 {
 	G_APPLICATION_CLASS(klass)->activate = app_activate;
 	G_APPLICATION_CLASS(klass)->startup = rufox_app_startup;
+	G_OBJECT_CLASS(klass)->finalize = rufox_app_finalize;
 }
 
 static void rufox_app_init(RufoxApp *self)
@@ -104,4 +119,15 @@ RufoxApp* rufox_app_new(void)
 	                    "application-id", "io.github.rufox",
 	                    "flags", G_APPLICATION_DEFAULT_FLAGS,
 	                    NULL);
+}
+
+void rufox_app_set_startup_options(RufoxApp *app, const char *image,
+                                   const char *device, const char *filesystem,
+                                   gboolean dry_run)
+{
+	g_return_if_fail(RUFOX_IS_APP(app));
+	app->startup_image = g_strdup(image);
+	app->startup_device = g_strdup(device);
+	app->startup_fs = g_strdup(filesystem);
+	app->startup_dry_run = dry_run;
 }
