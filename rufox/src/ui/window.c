@@ -565,20 +565,18 @@ static void on_log(RufoxEngine *engine, int level, const char *line, gpointer ud
 
 static void start_write(RufoxWindow *self);
 
-static void on_confirm_response(AdwMessageDialog *dialog, const char *response,
-                                gpointer ud)
+static void on_confirm_response(GtkDialog *dialog, int response, gpointer ud)
 {
 	RufoxWindow *self = RUFOX_WINDOW(ud);
 	gtk_window_destroy(GTK_WINDOW(dialog));
-	if (g_strcmp0(response, "ok") == 0)
+	if (response == GTK_RESPONSE_ACCEPT)
 		start_write(self);
 }
 
 /*
- * Rufus shows a modal "you are about to destroy this drive" box. We do the
- * same with AdwMessageDialog, but asynchronously: GTK 4 has no way to spin a
- * nested loop for a response without risking reentrancy, so the confirmation
- * callback is what actually kicks off the write.
+ * Rufus shows a modal "you are about to destroy this drive" box. GTK's
+ * asynchronous response callback kicks off the write without a nested loop.
+ * GtkMessageDialog also works on Ubuntu 22.04's older libadwaita.
  */
 static void confirm_destructive(RufoxWindow *self)
 {
@@ -593,14 +591,17 @@ static void confirm_destructive(RufoxWindow *self)
 		"<span foreground='red'><b>ALL DATA ON THIS DEVICE WILL BE DESTROYED.</b></span>",
 		d->FriendlyName, d->DevicePath, sz);
 
-	GtkWidget *dialog = adw_message_dialog_new(GTK_WINDOW(self),
-	                                           "Confirm the write operation", body);
-	adw_message_dialog_add_response(ADW_MESSAGE_DIALOG(dialog), "cancel", "Cancel");
-	adw_message_dialog_add_response(ADW_MESSAGE_DIALOG(dialog), "ok", "OK");
-	adw_message_dialog_set_response_appearance(ADW_MESSAGE_DIALOG(dialog), "ok",
-	                                           ADW_RESPONSE_DESTRUCTIVE);
-	adw_message_dialog_set_default_response(ADW_MESSAGE_DIALOG(dialog), "cancel");
-	adw_message_dialog_set_close_response(ADW_MESSAGE_DIALOG(dialog), "cancel");
+	GtkWidget *dialog = gtk_message_dialog_new(GTK_WINDOW(self),
+		GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT,
+		GTK_MESSAGE_WARNING, GTK_BUTTONS_NONE,
+		"Confirm the write operation");
+	gtk_message_dialog_format_secondary_markup(GTK_MESSAGE_DIALOG(dialog), "%s", body);
+	gtk_dialog_add_buttons(GTK_DIALOG(dialog),
+		"Cancel", GTK_RESPONSE_CANCEL, "OK", GTK_RESPONSE_ACCEPT, NULL);
+	gtk_dialog_set_default_response(GTK_DIALOG(dialog), GTK_RESPONSE_CANCEL);
+	GtkWidget *ok = gtk_dialog_get_widget_for_response(GTK_DIALOG(dialog),
+		GTK_RESPONSE_ACCEPT);
+	gtk_widget_add_css_class(ok, "destructive-action");
 	g_signal_connect(dialog, "response", G_CALLBACK(on_confirm_response), self);
 	gtk_window_present(GTK_WINDOW(dialog));
 }

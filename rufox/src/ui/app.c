@@ -21,22 +21,22 @@ static void on_about(GSimpleAction *action, GVariant *param, gpointer ud)
 	RufoxApp *self = RUFOX_APP(ud);
 	(void)action; (void)param;
 
-	GtkWidget *about = adw_about_window_new();
-	adw_about_window_set_application_name(ADW_ABOUT_WINDOW(about), "Rufox");
-	adw_about_window_set_application_icon(ADW_ABOUT_WINDOW(about), "io.github.rufox");
-	adw_about_window_set_version(ADW_ABOUT_WINDOW(about), RUFOX_VERSION_STR);
-	adw_about_window_set_developer_name(ADW_ABOUT_WINDOW(about), "rufox contributors");
-	adw_about_window_set_license_type(ADW_ABOUT_WINDOW(about), GTK_LICENSE_GPL_3_0_ONLY);
-	adw_about_window_set_website(ADW_ABOUT_WINDOW(about), "https://github.com/dan1lazz/Rufox");
-	adw_about_window_set_issue_url(ADW_ABOUT_WINDOW(about),
-	                               "https://github.com/dan1lazz/Rufox/issues");
-	adw_about_window_set_comments(ADW_ABOUT_WINDOW(about),
+	/* GtkAboutDialog keeps the release compatible with libadwaita 1.0/1.1,
+	 * which are still shipped by Ubuntu 22.04 and lack AdwAboutWindow. */
+	GtkWidget *about = gtk_about_dialog_new();
+	gtk_about_dialog_set_program_name(GTK_ABOUT_DIALOG(about), "Rufox");
+	gtk_about_dialog_set_logo_icon_name(GTK_ABOUT_DIALOG(about), "io.github.rufox");
+	gtk_about_dialog_set_version(GTK_ABOUT_DIALOG(about), RUFOX_VERSION_STR);
+	gtk_about_dialog_set_license_type(GTK_ABOUT_DIALOG(about), GTK_LICENSE_GPL_3_0_ONLY);
+	gtk_about_dialog_set_website(GTK_ABOUT_DIALOG(about), "https://github.com/dan1lazz/Rufox");
+	gtk_about_dialog_set_comments(GTK_ABOUT_DIALOG(about),
 		"A Linux port of Rufus, The Reliable USB Formatting Utility.\n\n"
 		"Derived from Rufus by Pete Batard <pete@akeo.ie>, licensed under the\n"
 		"GNU General Public License version 3 or later. The partition geometry,\n"
 		"the image analysis rules and the bootloader config patching follow\n"
-		"Rufus' own implementation, so that the resulting media behaves the same.");
-	adw_about_window_set_copyright(ADW_ABOUT_WINDOW(about),
+		"Rufus' own implementation, so that the resulting media behaves the same.\n\n"
+		"Report issues at https://github.com/dan1lazz/Rufox/issues");
+	gtk_about_dialog_set_copyright(GTK_ABOUT_DIALOG(about),
 		"\xc2\xa9 2011-2026 Pete Batard (Rufus)\n"
 		"\xc2\xa9 2026 rufox contributors (this port)");
 
@@ -117,7 +117,7 @@ RufoxApp* rufox_app_new(void)
 {
 	return g_object_new(RUFOX_TYPE_APP,
 	                    "application-id", "io.github.rufox",
-	                    "flags", G_APPLICATION_DEFAULT_FLAGS,
+	                    "flags", G_APPLICATION_FLAGS_NONE,
 	                    NULL);
 }
 
