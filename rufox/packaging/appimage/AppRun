@@ -7,6 +7,9 @@ export PATH="$APPDIR/usr/bin:$PATH"
 export LD_LIBRARY_PATH="$APPDIR/usr/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 export XDG_DATA_DIRS="$APPDIR/usr/share:${XDG_DATA_DIRS:-/usr/local/share:/usr/share}"
 export GSETTINGS_SCHEMA_DIR="$APPDIR/usr/share/glib-2.0/schemas"
+# Do not load host GIO modules against the bundled GLib: distro versions can
+# be newer and fail with undefined symbols. Rufox needs no external GIO module.
+export GIO_MODULE_DIR="$APPDIR/usr/lib/gio/modules"
 export RUFOX_HELPER="$APPDIR/usr/libexec/rufox-helper"
 export GTK_EXE_PREFIX="$APPDIR/usr"
 export GTK_DATA_PREFIX="$APPDIR/usr"

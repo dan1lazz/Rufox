@@ -34,7 +34,7 @@ jobs:
             libadwaita-1-dev libgudev-1.0-dev libudisks2-dev libblkid-dev \
             libcdio-dev libiso9660-dev libudf-dev libparted-dev zlib1g-dev \
             liblzma-dev dosfstools mtools ntfs-3g exfatprogs e2fsprogs \
-            syslinux-common isolinux xorriso libfuse2
+            syslinux-common isolinux xorriso libfuse2 xvfb
 
       - name: Build, test and package
         run: bash rufox/packaging/appimage/build-appimage.sh

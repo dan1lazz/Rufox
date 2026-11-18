@@ -80,6 +80,9 @@ VERSION=$(meson introspect "$BUILD_DIR" --projectinfo | python3 -c 'import json,
 # appimagetool needs a top-level raster icon to create .DirIcon.
 install -m 0644 "$APPDIR/usr/share/icons/hicolor/256x256/apps/io.github.rufox.png" \
   "$APPDIR/io.github.rufox.png"
+# AppRun points GIO_MODULE_DIR here so host modules cannot clash with the
+# bundled GLib. The directory intentionally stays empty.
+mkdir -p "$APPDIR/usr/lib/gio/modules"
 
 OUTPUT="$OUT_DIR/Rufox-$VERSION-$ARCH.AppImage"
 rm -f "$OUTPUT"
@@ -89,6 +92,18 @@ chmod +x "$OUTPUT"
 # Exercise the actual packaged runtime, not just the build-tree binaries.
 "$OUTPUT" --appimage-extract-and-run --cli list
 "$OUTPUT" --appimage-extract-and-run --cli hash -i "$ROOT_DIR/data/io.github.rufox.svg" -H sha256
+if command -v xvfb-run >/dev/null; then
+  GUI_LOG="$WORK_DIR/gui-smoke.log"
+  set +e
+  xvfb-run -a timeout 5s "$OUTPUT" --appimage-extract-and-run --dry-run >"$GUI_LOG" 2>&1
+  GUI_RC=$?
+  set -e
+  cat "$GUI_LOG"
+  if [[ $GUI_RC -ne 124 ]] || grep -Eiq 'critical|error|failed to load|undefined symbol|not found' "$GUI_LOG"; then
+    printf 'Packaged GUI smoke test failed (exit %s)\n' "$GUI_RC" >&2
+    exit 1
+  fi
+fi
 (
   cd "$OUT_DIR"
   sha256sum "$(basename "$OUTPUT")" > "$(basename "$OUTPUT").sha256"
